@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#080810"/>
+<title>Trợ Lý AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#080810;--bg2:#0d0d1a;--surface:#111120;--surface2:#16162a;--surface3:#1c1c33;
+  --gold:#c9a84c;--gold2:#e8c97a;--gold-dim:rgba(201,168,76,0.10);--gold-line:rgba(201,168,76,0.20);
+  --text:#f0efe8;--text2:#a8a899;--muted:#4a4a6a;
+  --user-bg:linear-gradient(135deg,#1a1a3a,#2a2250);--bot-bg:#111120;
+  --safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;height:100dvh;background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
+
+/* ══════════════════════════════
+   MAIN APP
+══════════════════════════════ */
+#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;position:relative;background:var(--bg);transition:opacity 0.3s}
+#app.minimized{opacity:0;pointer-events:none}
+
+/* grain */
+#app::before{content:'';position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5}
+
+/* ── HEADER ── */
+header{flex-shrink:0;padding:calc(14px + var(--safe-t)) 18px 14px;background:linear-gradient(180deg,#0e0e1e,#080810);border-bottom:1px solid var(--gold-line);display:flex;align-items:center;gap:13px;position:relative;z-index:10}
+.logo-mark{width:44px;height:44px;border-radius:12px;border:1px solid var(--gold-line);background:linear-gradient(135deg,#0e0e20,#1a1830);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden}
+.logo-mark::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(201,168,76,.18),transparent 70%)}
+.app-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--text);letter-spacing:.3px;line-height:1}
+.app-sub{font-size:10px;color:var(--gold);font-weight:500;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;opacity:.85}
+.hdr-btns{display:flex;gap:6px}
+.hdr-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--gold-line);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:background .15s,border-color .15s;position:relative}
+.hdr-btn:active{background:var(--surface2);border-color:var(--gold)}
+.hdr-btn.active{border-color:var(--gold);background:var(--gold-dim)}
+.float-toggle-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--gold);white-space:nowrap;font-weight:600;letter-spacing:.5px}
+
+/* ── PANELS ── */
+.panel{display:none;flex-direction:column;position:absolute;inset:0;z-index:30;background:var(--bg);animation:slideUp .25s cubic-bezier(.32,1,.32,1)}
+.panel.open{display:flex}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.panel-hdr{padding:16px 18px 14px;background:var(--surface);border-bottom:1px solid var(--gold-line);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.panel-icon{width:34px;height:34px;border-radius:9px;border:1px solid var(--gold-line);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:14px}
+.panel-title{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;flex:1;color:var(--text)}
+.panel-close{width:30px;height:30px;border-radius:8px;border:1px solid var(--gold-line);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:var(--text2)}
+.panel-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:9px}
+.panel-body::-webkit-scrollbar{display:none}
+.card{background:var(--surface);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.6;color:var(--text2);position:relative}
+.card-label{font-size:9.5px;font-weight:600;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.card-del{position:absolute;top:9px;right:9px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:3px 6px;border-radius:5px}
+.panel-footer{padding:11px 14px calc(11px + var(--safe-b));border-top:1px solid var(--gold-line);background:var(--surface);display:flex;gap:8px;flex-shrink:0}
+.panel-input{flex:1;background:var(--surface2);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.panel-input:focus{border-color:var(--gold)}
+.panel-input::placeholder{color:var(--muted)}
+.panel-btn{background:linear-gradient(135deg,#7a5a18,#c9a84c);border:none;border-radius:10px;color:#080810;font-size:12px;font-weight:700;padding:9px 13px;cursor:pointer;white-space:nowrap}
+.sec-div{font-size:9.5px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:3px 0 1px;display:flex;align-items:center;gap:8px}
+.sec-div::before,.sec-div::after{content:'';flex:1;height:1px;background:var(--gold-line)}
+.link-row{display:flex;gap:7px}
+.link-row input{flex:1;background:var(--surface2);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;outline:none}
+.link-row input::placeholder{color:var(--muted)}
+.link-row button{background:var(--surface3);border:1px solid var(--gold-line);border-radius:10px;color:var(--gold);font-size:12px;font-weight:600;padding:9px 12px;cursor:pointer}
+.drop-zone{border:1.5px dashed var(--gold-line);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--gold);background:var(--gold-dim)}
+.drop-zone p{font-size:12px;color:var(--text2);margin-top:5px;line-height:1.5}
+.dz-icon{font-size:24px}
+
+/* ── SUGGESTIONS ── */
+#suggestions{flex-shrink:0;padding:9px 13px 5px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:relative;z-index:1}
+#suggestions::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;background:var(--surface);border:1px solid var(--gold-line);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--gold2);font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s}
+.chip:active{background:var(--surface2);border-color:var(--gold)}
+
+/* ── MESSAGES ── */
+#messages{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px 13px 6px;display:flex;flex-direction:column;gap:13px;-webkit-overflow-scrolling:touch;position:relative;z-index:1}
+#messages::-webkit-scrollbar{width:3px}
+#messages::-webkit-scrollbar-thumb{background:var(--gold-line);border-radius:2px}
+.date-line{text-align:center;font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.8px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.date-line::before,.date-line::after{content:'';flex:1;height:1px;background:var(--gold-line)}
+.msg-row{display:flex;gap:9px;align-items:flex-end;animation:fadeUp .28s ease-out}
+.msg-row.user{flex-direction:row-reverse}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.av{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.av.bot{background:linear-gradient(135deg,#0e0e20,#1a1830);border:1px solid var(--gold-line)}
+.av.user{background:linear-gradient(135deg,#1a1830,#2a2250);border:1px solid rgba(138,106,200,.3)}
+.bcol{display:flex;flex-direction:column;gap:3px;max-width:78%}
+.msg-row.user .bcol{align-items:flex-end}
+.bubble{padding:10px 14px;border-radius:15px;font-size:13.5px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
+.bubble.bot{background:var(--bot-bg);border:1px solid var(--gold-line);border-bottom-left-radius:4px;color:var(--text2)}
+.bubble.user{background:var(--user-bg);border:1px solid rgba(138,106,200,.25);border-bottom-right-radius:4px;color:var(--text)}
+.ts{font-size:9px;color:var(--muted);padding:0 3px}
+.typing-row{display:flex;gap:9px;align-items:flex-end;animation:fadeUp .25s ease-out}
+.typing-bub{background:var(--bot-bg);border:1px solid var(--gold-line);border-radius:15px;border-bottom-left-radius:4px;padding:12px 16px;display:flex;gap:5px;align-items:center}
+.typing-bub span{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:tdot 1.2s infinite}
+.typing-bub span:nth-child(2){animation-delay:.2s}
+.typing-bub span:nth-child(3){animation-delay:.4s}
+@keyframes tdot{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-5px);opacity:1}}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:11px;padding:32px 24px;text-align:center}
+.empty-emblem{width:68px;height:68px;border-radius:18px;border:1px solid var(--gold-line);background:linear-gradient(135deg,#0e0e20,#1a1830);display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+.empty h3{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:600;color:var(--text)}
+.empty p{font-size:12.5px;color:var(--text2);line-height:1.7;max-width:250px}
+.err{text-align:center;font-size:12px;color:#f87171;background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.18);border-radius:10px;padding:8px 13px;animation:fadeUp .25s ease-out}
+
+/* ── INPUT ── */
+#input-area{flex-shrink:0;padding:9px 12px calc(11px + var(--safe-b));background:linear-gradient(0deg,#0a0a16,#080810);border-top:1px solid var(--gold-line);position:relative;z-index:1}
+.input-wrap{display:flex;align-items:flex-end;gap:7px;background:var(--surface);border:1px solid var(--gold-line);border-radius:16px;padding:8px 9px 8px 14px;transition:border-color .2s}
+.input-wrap:focus-within{border-color:rgba(201,168,76,.45)}
+#msg-input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;resize:none;max-height:88px;overflow-y:auto;scrollbar-width:none}
+#msg-input::-webkit-scrollbar{display:none}
+#msg-input::placeholder{color:var(--muted)}
+.input-actions{display:flex;gap:5px;align-items:flex-end;flex-shrink:0}
+.attach-btn{width:32px;height:32px;border-radius:9px;background:var(--surface2);border:1px solid var(--gold-line);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;flex-shrink:0}
+#send-btn{width:33px;height:33px;border-radius:10px;background:linear-gradient(135deg,#7a5a18,#c9a84c);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s,transform .1s}
+#send-btn:disabled{opacity:.28;cursor:not-allowed}
+#send-btn:not(:disabled):active{transform:scale(.9)}
+#send-btn svg{width:13px;height:13px;fill:#080810}
+.hint{text-align:center;font-size:10px;color:var(--muted);margin-top:6px}
+
+/* ══════════════════════════════
+   FLOATING ROBOT
+══════════════════════════════ */
+#float-robot{
+  position:fixed;
+  bottom:calc(28px + var(--safe-b));
+  right:22px;
+  z-index:9999;
+  display:none;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
+  touch-action:none;
+  user-select:none;
+}
+#float-robot.visible{display:flex}
+
+/* robot button */
+.robot-btn{
+  width:58px;height:58px;border-radius:18px;
+  background:linear-gradient(135deg,#0e0e20,#1a1830);
+  border:1.5px solid var(--gold);
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 0 rgba(201,168,76,.4);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;
+  animation:robotPulse 3s ease-in-out infinite;
+  transition:transform .15s;
+}
+.robot-btn:active{transform:scale(.93)}
+@keyframes robotPulse{
+  0%,100%{box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 0 rgba(201,168,76,.35)}
+  50%{box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 8px rgba(201,168,76,.0)}
+}
+.robot-face{font-size:26px;line-height:1}
+.robot-badge{
+  position:absolute;top:-5px;right:-5px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--gold);border:2px solid var(--bg);
+  display:none;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;color:#080810;
+}
+.robot-badge.show{display:flex}
+.robot-label{
+  position:absolute;left:-76px;top:50%;transform:translateY(-50%);
+  background:var(--surface);border:1px solid var(--gold-line);
+  border-radius:8px;padding:5px 9px;
+  font-size:11px;color:var(--gold2);font-weight:600;
+  white-space:nowrap;pointer-events:none;
+  opacity:0;transition:opacity .2s;
+}
+#float-robot:hover .robot-label{opacity:1}
+
+/* ── FLOATING CHAT WINDOW ── */
+#float-chat{
+  position:fixed;
+  bottom:calc(96px + var(--safe-b));
+  right:16px;
+  width:min(340px, calc(100vw - 32px));
+  height:min(520px, calc(100dvh - 130px));
+  background:var(--bg);
+  border:1px solid var(--gold-line);
+  border-radius:20px;
+  box-shadow:0 24px 80px rgba(0,0,0,.8),0 0 0 1px rgba(201,168,76,.08);
+  display:none;
+  flex-direction:column;
+  overflow:hidden;
+  z-index:9998;
+  animation:floatIn .3s cubic-bezier(.32,1,.32,1);
+  transform-origin:bottom right;
+}
+#float-chat.open{display:flex}
+@keyframes floatIn{from{transform:scale(.85) translateY(16px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+
+/* float header */
+.float-hdr{
+  padding:13px 15px 11px;
+  background:linear-gradient(180deg,#0e0e1e,#0a0a14);
+  border-bottom:1px solid var(--gold-line);
+  display:flex;align-items:center;gap:10px;
+  flex-shrink:0;
+}
+.float-hdr-logo{width:34px;height:34px;border-radius:10px;border:1px solid var(--gold-line);background:linear-gradient(135deg,#0e0e20,#1a1830);display:flex;align-items:center;justify-content:center;font-size:16px}
+.float-hdr-info{flex:1}
+.float-hdr-name{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:var(--text);line-height:1}
+.float-status{display:flex;align-items:center;gap:5px;margin-top:2px}
+.float-dot{width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 6px rgba(52,211,153,.8)}
+.float-status span{font-size:10px;color:var(--muted);font-weight:500}
+.float-hdr-actions{display:flex;gap:5px}
+.float-action-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--gold-line);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;transition:background .15s}
+.float-action-btn:active{background:var(--surface2)}
+
+/* float tabs */
+.float-tabs{display:flex;border-bottom:1px solid var(--gold-line);flex-shrink:0}
+.ftab{flex:1;padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;letter-spacing:.3px}
+.ftab.active{color:var(--gold);border-color:var(--gold)}
+
+/* float tab content */
+.ftab-content{display:none;flex:1;flex-direction:column;overflow:hidden}
+.ftab-content.active{display:flex}
+
+/* float messages */
+#float-messages{flex:1;overflow-y:auto;padding:12px 10px 6px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+#float-messages::-webkit-scrollbar{width:2px}
+#float-messages::-webkit-scrollbar-thumb{background:var(--gold-line);border-radius:1px}
+
+.fb{padding:9px 12px;border-radius:13px;font-size:12.5px;line-height:1.55;word-break:break-word;white-space:pre-wrap;max-width:85%}
+.fb.bot{background:var(--bot-bg);border:1px solid var(--gold-line);border-bottom-left-radius:3px;color:var(--text2);align-self:flex-start}
+.fb.user{background:var(--user-bg);border:1px solid rgba(138,106,200,.2);border-bottom-right-radius:3px;color:var(--text);align-self:flex-end}
+.fb-typing{background:var(--bot-bg);border:1px solid var(--gold-line);border-radius:13px;border-bottom-left-radius:3px;padding:10px 14px;display:flex;gap:4px;align-items:center;align-self:flex-start}
+.fb-typing span{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:tdot 1.2s infinite}
+.fb-typing span:nth-child(2){animation-delay:.2s}
+.fb-typing span:nth-child(3){animation-delay:.4s}
+
+/* float input */
+.float-input-area{padding:8px 10px calc(8px + 0px);border-top:1px solid var(--gold-line);background:var(--surface);flex-shrink:0}
+.float-input-wrap{display:flex;align-items:flex-end;gap:6px;background:var(--bg);border:1px solid var(--gold-line);border-radius:12px;padding:7px 8px 7px 12px;transition:border-color .2s}
+.float-input-wrap:focus-within{border-color:rgba(201,168,76,.45)}
+#float-input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.5;resize:none;max-height:70px;overflow-y:auto;scrollbar-width:none}
+#float-input::-webkit-scrollbar{display:none}
+#float-input::placeholder{color:var(--muted)}
+#float-send{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#7a5a18,#c9a84c);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s,transform .1s}
+#float-send:disabled{opacity:.28;cursor:not-allowed}
+#float-send:not(:disabled):active{transform:scale(.88)}
+#float-send svg{width:12px;height:12px;fill:#080810}
+
+/* float memory / knowledge panels */
+.float-panel-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.float-panel-body::-webkit-scrollbar{display:none}
+.fcard{background:var(--surface);border:1px solid var(--gold-line);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--text2);position:relative}
+.fcard-label{font-size:9px;font-weight:600;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.fcard-del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 5px;border-radius:5px}
+.float-panel-footer{padding:8px 10px;border-top:1px solid var(--gold-line);background:var(--surface);display:flex;gap:7px;flex-shrink:0}
+.float-panel-footer input,.float-panel-footer textarea{flex:1;background:var(--bg);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;outline:none;resize:none}
+.float-panel-footer input::placeholder,.float-panel-footer textarea::placeholder{color:var(--muted)}
+.fpbtn{background:linear-gradient(135deg,#7a5a18,#c9a84c);border:none;border-radius:9px;color:#080810;font-size:11px;font-weight:700;padding:8px 11px;cursor:pointer;white-space:nowrap}
+
+/* float knowledge tabs */
+.fk-tabs{display:flex;gap:6px;padding:10px 10px 4px;flex-wrap:wrap;flex-shrink:0}
+.fk-tab{background:var(--surface);border:1px solid var(--gold-line);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2);cursor:pointer;transition:background .15s,border-color .15s}
+.fk-tab.active{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
+.fk-section{display:none;flex:1;flex-direction:column;overflow:hidden}
+.fk-section.active{display:flex}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface);border:1px solid var(--gold-line);border-radius:10px;padding:8px 15px;font-size:12px;color:var(--gold2);opacity:0;pointer-events:none;transition:all .3s;white-space:nowrap;z-index:99999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── FLOATING MODE OVERLAY ── */
+#float-overlay{display:none;position:fixed;inset:0;background:rgba(8,8,16,.7);backdrop-filter:blur(4px);z-index:9990;animation:fadeIn .3s ease}
+#float-overlay.show{display:block}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+
+<!-- ════════════════ MAIN APP ════════════════ -->
+<div id="app">
+  <header>
+    <div class="logo-mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 9.5H22L16 14L18.5 21.5L12 17L5.5 21.5L8 14L2 9.5H9.5L12 2Z" fill="#c9a84c" opacity=".9"/></svg>
+    </div>
+    <div style="flex:1">
+      <div class="app-title">Trợ Lý AI</div>
+      <div class="app-sub">Cá nhân · Thông minh · Bảo mật</div>
+    </div>
+    <div class="hdr-btns">
+      <div class="hdr-btn" onclick="openPanel('memory')" title="Bộ nhớ">🧠</div>
+      <div class="hdr-btn" onclick="openPanel('knowledge')" title="Kiến thức">📚</div>
+      <div class="hdr-btn" id="float-toggle-btn" onclick="toggleFloatMode()" title="Chế độ nổi">🤖
+        <span class="float-toggle-label">Nổi</span>
+      </div>
+      <div class="hdr-btn" onclick="clearChat()" title="Xóa">🗑</div>
+    </div>
+  </header>
+
+  <!-- MEMORY PANEL -->
+  <div class="panel" id="panel-memory">
+    <div class="panel-hdr">
+      <div class="panel-icon">🧠</div>
+      <div class="panel-title">Bộ nhớ cá nhân</div>
+      <div class="panel-close" onclick="closePanel('memory')">✕</div>
+    </div>
+    <div class="panel-body" id="memory-list"></div>
+    <div class="panel-footer">
+      <input class="panel-input" id="mem-input" placeholder="Thêm thông tin để ghi nhớ…"/>
+      <button class="panel-btn" onclick="addMemory()">Lưu</button>
+    </div>
+  </div>
+
+  <!-- KNOWLEDGE PANEL -->
+  <div class="panel" id="panel-knowledge">
+    <div class="panel-hdr">
+      <div class="panel-icon">📚</div>
+      <div class="panel-title">Cập nhật kiến thức</div>
+      <div class="panel-close" onclick="closePanel('knowledge')">✕</div>
+    </div>
+    <div class="panel-body">
+      <div class="sec-div">Nhập link bài viết</div>
+      <div class="link-row">
+        <input id="link-input" placeholder="Dán URL bài viết, tin tức…" type="url"/>
+        <button onclick="addLink()">Thêm</button>
+      </div>
+      <div class="sec-div" style="margin-top:6px">Tải lên tài liệu</div>
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="dz-icon">📄</div>
+        <p>Nhấn để chọn file<br/><span style="color:var(--muted);font-size:11px">PDF, TXT, CSV, DOCX — tối đa 2MB</span></p>
+      </div>
+      <input type="file" id="file-input" accept=".pdf,.txt,.csv,.docx,.md" style="display:none" onchange="handleFile(event)"/>
+      <div class="sec-div" style="margin-top:6px">Nhập văn bản trực tiếp</div>
+      <textarea class="panel-input" id="raw-text" rows="4" style="width:100%;resize:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:13px;line-height:1.5" placeholder="Dán nội dung, báo cáo, dữ liệu thị trường…"></textarea>
+      <button class="panel-btn" style="align-self:flex-end" onclick="addRawText()">Lưu kiến thức</button>
+      <div class="sec-div" style="margin-top:4px">Kiến thức đã lưu</div>
+      <div id="knowledge-list"></div>
+    </div>
+  </div>
+
+  <!-- MESSAGES -->
+  <div id="messages">
+    <div class="empty" id="empty-state">
+      <div class="empty-emblem">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 9.5H22L16 14L18.5 21.5L12 17L5.5 21.5L8 14L2 9.5H9.5L12 2Z" fill="#c9a84c" opacity=".85"/></svg>
+      </div>
+      <h3>Trợ Lý AI</h3>
+      <p>Trợ lý cá nhân thông minh — phân tích tài chính, lên kế hoạch, và hỗ trợ mọi tác vụ hàng ngày.</p>
+    </div>
+  </div>
+
+  <!-- SUGGESTIONS -->
+  <div id="suggestions">
+    <div class="chip" onclick="useSug(this)">📊 Phân tích thị trường</div>
+    <div class="chip" onclick="useSug(this)">₿ Bitcoin & Crypto</div>
+    <div class="chip" onclick="useSug(this)">📰 Tin tài chính hôm nay</div>
+    <div class="chip" onclick="useSug(this)">📅 Kế hoạch ngày</div>
+    <div class="chip" onclick="useSug(this)">📈 RSI & MACD là gì?</div>
+    <div class="chip" onclick="useSug(this)">💼 Quản lý danh mục</div>
+  </div>
+
+  <!-- INPUT -->
+  <div id="input-area">
+    <div class="input-wrap">
+      <textarea id="msg-input" rows="1" placeholder="Hỏi bất cứ điều gì…"></textarea>
+      <div class="input-actions">
+        <div class="attach-btn" onclick="openPanel('knowledge')" title="Đính kèm">📎</div>
+        <button id="send-btn" onclick="sendMessage()" disabled>
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="hint">Nhấn gửi · Shift+Enter xuống dòng · 🤖 bật chế độ nổi</div>
+  </div>
+</div>
+
+<!-- ════════════════ FLOATING OVERLAY ════════════════ -->
+<div id="float-overlay" onclick="closeFloatChat()"></div>
+
+<!-- ════════════════ FLOATING ROBOT BUTTON ════════════════ -->
+<div id="float-robot">
+  <div id="float-chat">
+    <!-- Float Header -->
+    <div class="float-hdr">
+      <div class="float-hdr-logo">✦</div>
+      <div class="float-hdr-info">
+        <div class="float-hdr-name">Trợ Lý AI</div>
+        <div class="float-status"><span class="float-dot"></span><span>Đang hoạt động</span></div>
+      </div>
+      <div class="float-hdr-actions">
+        <div class="float-action-btn" onclick="openFullApp()" title="Mở toàn màn hình">⛶</div>
+        <div class="float-action-btn" onclick="closeFloatChat()" title="Thu nhỏ">✕</div>
+      </div>
+    </div>
+
+    <!-- Float Tabs -->
+    <div class="float-tabs">
+      <div class="ftab active" onclick="switchFTab('chat',this)">💬 Chat</div>
+      <div class="ftab" onclick="switchFTab('memory',this)">🧠 Nhớ</div>
+      <div class="ftab" onclick="switchFTab('knowledge',this)">📚 Kiến thức</div>
+    </div>
+
+    <!-- TAB: CHAT -->
+    <div class="ftab-content active" id="ftab-chat">
+      <div id="float-messages"></div>
+      <div class="float-input-area">
+        <div class="float-input-wrap">
+          <textarea id="float-input" rows="1" placeholder="Nhắn gì đó…"></textarea>
+          <button id="float-send" onclick="floatSend()" disabled>
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: MEMORY -->
+    <div class="ftab-content" id="ftab-memory">
+      <div class="float-panel-body" id="float-memory-list"></div>
+      <div class="float-panel-footer">
+        <input id="float-mem-input" placeholder="Thêm thông tin ghi nhớ…"/>
+        <button class="fpbtn" onclick="floatAddMemory()">Lưu</button>
+      </div>
+    </div>
+
+    <!-- TAB: KNOWLEDGE -->
+    <div class="ftab-content" id="ftab-knowledge">
+      <div class="fk-tabs">
+        <div class="fk-tab active" onclick="switchFKTab('text',this)">📝 Văn bản</div>
+        <div class="fk-tab" onclick="switchFKTab('link',this)">🔗 Link</div>
+        <div class="fk-tab" onclick="switchFKTab('saved',this)">📂 Đã lưu</div>
+      </div>
+
+      <div class="fk-section active" id="fks-text" style="flex-direction:column;gap:7px;padding:10px">
+        <textarea id="float-raw-text" style="flex:1;min-height:120px;background:var(--bg);border:1px solid var(--gold-line);border-radius:10px;padding:9px 11px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;resize:none;outline:none" placeholder="Dán văn bản, báo cáo, dữ liệu…"></textarea>
+        <button class="fpbtn" style="align-self:flex-end" onclick="floatAddText()">Lưu kiến thức</button>
+      </div>
+
+      <div class="fk-section" id="fks-link" style="flex-direction:column;gap:7px;padding:10px">
+        <input id="float-link" style="background:var(--bg);border:1px solid var(--gold-line);border-radius:10px;padding:9px 11px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;outline:none;width:100%" placeholder="Dán URL bài viết…" type="url"/>
+        <button class="fpbtn" onclick="floatAddLink()">Thêm link</button>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">Hoặc tải file lên:</div>
+        <div class="drop-zone" style="padding:14px" onclick="document.getElementById('float-file-input').click()">
+          <div class="dz-icon" style="font-size:20px">📄</div>
+          <p style="font-size:11px">Nhấn để chọn file</p>
+        </div>
+        <input type="file" id="float-file-input" accept=".pdf,.txt,.csv,.docx,.md" style="display:none" onchange="handleFloatFile(event)"/>
+      </div>
+
+      <div class="fk-section" id="fks-saved" style="flex-direction:column">
+        <div class="float-panel-body" id="float-knowledge-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Robot Button -->
+  <div class="robot-btn" id="robot-btn" onclick="toggleFloatChat()">
+    <span class="robot-face">🤖</span>
+    <span class="robot-badge" id="robot-badge">0</span>
+    <span class="robot-label">Trợ Lý AI</span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── STATE ──
+let history   = JSON.parse(localStorage.getItem('tlai_h') || '[]');
+let memories  = JSON.parse(localStorage.getItem('tlai_m') || '[]');
+let knowledge = JSON.parse(localStorage.getItem('tlai_k') || '[]');
+let isTyping  = false;
+let floatMode = localStorage.getItem('tlai_float') === '1';
+let unread    = 0;
+let floatOpen = false;
+let isDragging= false, dragStartX, dragStartY, btnStartX, btnStartY;
+
+const SYSTEM = () => {
+  let s = `Bạn là "Trợ Lý AI" — trợ lý cá nhân thông minh, lịch sự, chuyên nghiệp.
+Trả lời bằng tiếng Việt. Tự nhiên, súc tích (3-5 câu) trừ khi cần chi tiết.
+Khi phân tích tài chính: rõ ràng, có số liệu, luôn nhắc đây là tham khảo, không phải lời khuyên đầu tư.`;
+  if (memories.length)
+    s += '\n\n— Thông tin người dùng:\n' + memories.map((m,i)=>`${i+1}. ${m}`).join('\n');
+  if (knowledge.length)
+    s += '\n\n— Kiến thức bổ sung:\n' + knowledge.map(k=>`[${k.label}]: ${k.content.substring(0,600)}`).join('\n\n');
+  return s;
+};
+
+// ── INIT ──
+window.addEventListener('load', () => {
+  if (history.length) { removeEmpty(); history.forEach(m => appendBubble(m.role, m.content, false)); }
+  setupInput(); setupDrop(); renderMemory(); renderKnowledge();
+  setupFloatInput(); renderFloatMemory(); renderFloatKnowledge();
+  scrollBottom(); syncFloatMessages();
+  if (floatMode) activateFloatMode();
+  document.getElementById('mem-input').addEventListener('keydown', e => { if(e.key==='Enter') addMemory(); });
+  document.getElementById('link-input').addEventListener('keydown', e => { if(e.key==='Enter') addLink(); });
+  document.getElementById('float-mem-input').addEventListener('keydown', e => { if(e.key==='Enter') floatAddMemory(); });
+});
+
+// ══════════════════════════════
+// FLOAT MODE
+// ══════════════════════════════
+function toggleFloatMode() {
+  floatMode = !floatMode;
+  localStorage.setItem('tlai_float', floatMode ? '1' : '0');
+  if (floatMode) activateFloatMode();
+  else deactivateFloatMode();
+}
+
+function activateFloatMode() {
+  floatMode = true;
+  document.getElementById('float-robot').classList.add('visible');
+  document.getElementById('float-toggle-btn').classList.add('active');
+  document.getElementById('app').classList.add('minimized');
+  toast('Chế độ nổi đã bật 🤖');
+  setupDrag();
+}
+
+function deactivateFloatMode() {
+  floatMode = false;
+  document.getElementById('float-robot').classList.remove('visible');
+  document.getElementById('float-toggle-btn').classList.remove('active');
+  document.getElementById('app').classList.remove('minimized');
+  document.getElementById('float-chat').classList.remove('open');
+  document.getElementById('float-overlay').classList.remove('show');
+  floatOpen = false;
+  toast('Chế độ nổi đã tắt');
+}
+
+function toggleFloatChat() {
+  if (isDragging) return;
+  floatOpen = !floatOpen;
+  document.getElementById('float-chat').classList.toggle('open', floatOpen);
+  document.getElementById('float-overlay').classList.toggle('show', floatOpen);
+  if (floatOpen) {
+    syncFloatMessages();
+    unread = 0;
+    document.getElementById('robot-badge').classList.remove('show');
+    setTimeout(() => document.getElementById('float-input').focus(), 300);
+  }
+}
+
+function closeFloatChat() {
+  floatOpen = false;
+  document.getElementById('float-chat').classList.remove('open');
+  document.getElementById('float-overlay').classList.remove('show');
+}
+
+function openFullApp() {
+  closeFloatChat();
+  document.getElementById('app').classList.remove('minimized');
+  document.getElementById('float-robot').classList.remove('visible');
+  floatMode = false;
+  localStorage.setItem('tlai_float', '0');
+  document.getElementById('float-toggle-btn').classList.remove('active');
+}
+
+// ── DRAG ──
+function setupDrag() {
+  const robot = document.getElementById('float-robot');
+  robot.addEventListener('touchstart', onDragStart, { passive: true });
+  document.addEventListener('touchmove', onDragMove, { passive: false });
+  document.addEventListener('touchend', onDragEnd);
+}
+
+function onDragStart(e) {
+  if (e.target.closest('#float-chat')) return;
+  const t = e.touches[0];
+  dragStartX = t.clientX; dragStartY = t.clientY;
+  const robot = document.getElementById('float-robot');
+  const rect = robot.getBoundingClientRect();
+  btnStartX = rect.right; btnStartY = rect.bottom;
+  isDragging = false;
+}
+
+function onDragMove(e) {
+  const t = e.touches[0];
+  const dx = t.clientX - dragStartX, dy = t.clientY - dragStartY;
+  if (!isDragging && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) isDragging = true;
+  if (!isDragging) return;
+  e.preventDefault();
+  const robot = document.getElementById('float-robot');
+  const newRight = Math.max(8, Math.min(window.innerWidth - 66, window.innerWidth - btnStartX - dx + 8));
+  const newBottom = Math.max(8, Math.min(window.innerHeight - 70, window.innerHeight - btnStartY - dy + 8));
+  robot.style.right = newRight + 'px';
+  robot.style.bottom = newBottom + 'px';
+}
+
+function onDragEnd() { setTimeout(() => { isDragging = false; }, 50); }
+
+// ── FLOAT TABS ──
+function switchFTab(name, el) {
+  document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ftab-content').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('ftab-' + name).classList.add('active');
+  if (name === 'memory') renderFloatMemory();
+  if (name === 'knowledge') renderFloatKnowledge();
+}
+
+function switchFKTab(name, el) {
+  document.querySelectorAll('.fk-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.fk-section').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('fks-' + name).classList.add('active');
+  if (name === 'saved') renderFloatKnowledge();
+}
+
+// ── SYNC FLOAT ──
+function syncFloatMessages() {
+  const fc = document.getElementById('float-messages');
+  fc.innerHTML = '';
+  if (!history.length) {
+    fc.innerHTML = `<div class="fb bot">Xin chào! Mình là Trợ Lý AI ✦ — hỏi mình bất cứ điều gì nhé 😊</div>`;
+    return;
+  }
+  history.slice(-30).forEach(m => {
+    const el = document.createElement('div');
+    el.className = 'fb ' + (m.role === 'user' ? 'user' : 'bot');
+    el.innerHTML = esc(m.content);
+    fc.appendChild(el);
+  });
+  setTimeout(() => { fc.scrollTop = fc.scrollHeight; }, 50);
+}
+
+// ── FLOAT SEND ──
+async function floatSend() {
+  const inp = document.getElementById('float-input');
+  const text = inp.value.trim();
+  if (!text || isTyping) return;
+  removeEmpty();
+  const fc = document.getElementById('float-messages');
+
+  const ub = document.createElement('div'); ub.className = 'fb user'; ub.innerHTML = esc(text); fc.appendChild(ub);
+  appendBubble('user', text);
+  history.push({ role: 'user', content: text }); saveHistory();
+  inp.value = ''; inp.style.height = 'auto';
+  document.getElementById('float-send').disabled = true;
+  isTyping = true;
+
+  const tb = document.createElement('div'); tb.className = 'fb-typing'; tb.id = 'float-typing';
+  tb.innerHTML = '<span></span><span></span><span></span>'; fc.appendChild(tb);
+  fc.scrollTop = fc.scrollHeight;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': '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',
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-allow-browser': 'true'
+        },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: SYSTEM(), messages: history.slice(-24) })
+    });
+    const data = await res.json();
+    const reply = data?.content?.map(b => b.text || '').join('') || 'Xin lỗi, có lỗi xảy ra.';
+    tb.remove();
+    const rb = document.createElement('div'); rb.className = 'fb bot'; rb.innerHTML = esc(reply); fc.appendChild(rb);
+    fc.scrollTop = fc.scrollHeight;
+    appendBubble('assistant', reply);
+    history.push({ role: 'assistant', content: reply }); saveHistory();
+    autoMemory(text);
+    if (!floatOpen) { unread++; const b = document.getElementById('robot-badge'); b.textContent = unread; b.classList.add('show'); }
+  } catch {
+    tb.remove();
+    const eb = document.createElement('div'); eb.className = 'fb bot'; eb.innerHTML = '⚠ Lỗi kết nối.'; fc.appendChild(eb);
+  }
+  isTyping = false;
+}
+
+function setupFloatInput() {
+  const inp = document.getElementById('float-input');
+  const btn = document.getElementById('float-send');
+  inp.addEventListener('input', () => {
+    btn.disabled = !inp.value.trim();
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 70) + 'px';
+  });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!btn.disabled) floatSend(); } });
+}
+
+// ── FLOAT MEMORY ──
+function renderFloatMemory() {
+  const list = document.getElementById('float-memory-list');
+  list.innerHTML = '';
+  if (!memories.length) { list.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:16px;text-align:center;line-height:1.7">Chưa có gì được ghi nhớ.<br/>Thêm thông tin về bạn.</div>`; return; }
+  memories.forEach((m, i) => {
+    const c = document.createElement('div'); c.className = 'fcard';
+    c.innerHTML = `<div class="fcard-label">Ghi nhớ ${i+1}</div>${esc(m)}<button class="fcard-del" onclick="delMemory(${i});renderFloatMemory()">✕</button>`;
+    list.appendChild(c);
+  });
+}
+
+function floatAddMemory() {
+  const inp = document.getElementById('float-mem-input');
+  const v = inp.value.trim(); if (!v) return;
+  memories.push(v); save('tlai_m', memories); inp.value = '';
+  renderMemory(); renderFloatMemory(); toast('Đã lưu ✓');
+}
+
+// ── FLOAT KNOWLEDGE ──
+function renderFloatKnowledge() {
+  const list = document.getElementById('float-knowledge-list');
+  list.innerHTML = '';
+  if (!knowledge.length) { list.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:14px;text-align:center">Chưa có kiến thức nào.</div>`; return; }
+  knowledge.forEach((k, i) => {
+    const c = document.createElement('div'); c.className = 'fcard';
+    c.innerHTML = `<div class="fcard-label">${esc(k.label)}</div>${esc(k.content.substring(0,100))}${k.content.length>100?'…':''}<button class="fcard-del" onclick="delKnowledge(${i});renderFloatKnowledge()">✕</button>`;
+    list.appendChild(c);
+  });
+}
+
+function floatAddText() {
+  const ta = document.getElementById('float-raw-text'); const v = ta.value.trim(); if (!v) return;
+  knowledge.push({ label: '📝 Văn bản (' + new Date().toLocaleDateString('vi-VN') + ')', content: v });
+  save('tlai_k', knowledge); ta.value = ''; renderKnowledge(); renderFloatKnowledge(); toast('Đã lưu kiến thức ✓');
+}
+
+function floatAddLink() {
+  const inp = document.getElementById('float-link'); const url = inp.value.trim(); if (!url) return;
+  knowledge.push({ label: '🔗 ' + url.replace(/https?:\/\//, '').substring(0, 40), content: '[Link] ' + url });
+  save('tlai_k', knowledge); inp.value = ''; renderKnowledge(); renderFloatKnowledge(); toast('Đã lưu link ✓');
+}
+
+function handleFloatFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { toast('File quá lớn (tối đa 2MB)'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    knowledge.push({ label: '📄 ' + file.name, content: ev.target.result.substring(0, 3000) });
+    save('tlai_k', knowledge); renderKnowledge(); renderFloatKnowledge(); toast('Đã tải: ' + file.name + ' ✓');
+  };
+  reader.readAsText(file, 'UTF-8'); e.target.value = '';
+}
+
+// ══════════════════════════════
+// MAIN CHAT
+// ══════════════════════════════
+function setupInput() {
+  const inp = document.getElementById('msg-input'), btn = document.getElementById('send-btn');
+  inp.addEventListener('input', () => {
+    btn.disabled = !inp.value.trim();
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 88) + 'px';
+  });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!btn.disabled) sendMessage(); } });
+}
+
+async function sendMessage() {
+  const inp = document.getElementById('msg-input'), text = inp.value.trim();
+  if (!text || isTyping) return;
+  removeEmpty(); appendBubble('user', text);
+  history.push({ role: 'user', content: text }); saveHistory();
+  inp.value = ''; inp.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+  isTyping = true; showTyping();
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': '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',
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-allow-browser': 'true'
+        },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: SYSTEM(), messages: history.slice(-24) })
+    });
+    const data = await res.json();
+    const reply = data?.content?.map(b => b.text || '').join('') || 'Xin lỗi, có lỗi xảy ra.';
+    hideTyping(); appendBubble('assistant', reply);
+    history.push({ role: 'assistant', content: reply }); saveHistory(); autoMemory(text);
+  } catch { hideTyping(); appendErr('Không thể kết nối. Kiểm tra mạng và thử lại.'); }
+  isTyping = false;
+}
+
+function appendBubble(role, text, anim = true) {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div'); row.className = `msg-row ${role === 'user' ? 'user' : ''}`;
+  if (!anim) row.style.animation = 'none';
+  const t = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  row.innerHTML = `<div class="av ${role!=='user'?'bot':'user'}">${role!=='user'?'✦':'👤'}</div><div class="bcol"><div class="bubble ${role!=='user'?'bot':'user'}">${esc(text)}</div><span class="ts">${t}</span></div>`;
+  msgs.appendChild(row); scrollBottom();
+}
+
+function appendErr(msg) { const el = document.createElement('div'); el.className = 'err'; el.textContent = '⚠ ' + msg; document.getElementById('messages').appendChild(el); scrollBottom(); }
+function showTyping() { const msgs = document.getElementById('messages'), el = document.createElement('div'); el.id = 'typing-ind'; el.className = 'typing-row'; el.innerHTML = `<div class="av bot">✦</div><div class="typing-bub"><span></span><span></span><span></span></div>`; msgs.appendChild(el); scrollBottom(); }
+function hideTyping() { document.getElementById('typing-ind')?.remove(); }
+
+// ── MEMORY ──
+function renderMemory() {
+  const list = document.getElementById('memory-list'); list.innerHTML = '';
+  if (!memories.length) { list.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:26px 14px;line-height:1.7">Chưa có gì được ghi nhớ.<br/>Thêm thông tin về bạn.</div>`; return; }
+  memories.forEach((m, i) => { const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<div class="card-label">Ghi nhớ ${i+1}</div>${esc(m)}<button class="card-del" onclick="delMemory(${i})">✕</button>`; list.appendChild(c); });
+}
+function addMemory() { const inp = document.getElementById('mem-input'), v = inp.value.trim(); if (!v) return; memories.push(v); save('tlai_m', memories); inp.value = ''; renderMemory(); renderFloatMemory(); toast('Đã lưu vào bộ nhớ ✓'); }
+function delMemory(i) { memories.splice(i, 1); save('tlai_m', memories); renderMemory(); renderFloatMemory(); }
+function autoMemory(text) { const triggers = ['tên tôi','tôi làm','tôi ở','tôi thích','danh mục','vốn của','đầu tư']; if (triggers.some(t => text.toLowerCase().includes(t)) && !memories.some(m => m.slice(0,15) === text.slice(0,15))) { memories.push(text); save('tlai_m', memories); } }
+
+// ── KNOWLEDGE ──
+function renderKnowledge() {
+  const list = document.getElementById('knowledge-list'); list.innerHTML = '';
+  if (!knowledge.length) { list.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 2px">Chưa có kiến thức nào được thêm.</div>`; return; }
+  knowledge.forEach((k, i) => { const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<div class="card-label">${esc(k.label)}</div>${esc(k.content.substring(0,120))}${k.content.length>120?'…':''}<button class="card-del" onclick="delKnowledge(${i})">✕</button>`; list.appendChild(c); });
+}
+function addLink() { const inp = document.getElementById('link-input'), url = inp.value.trim(); if (!url) return; knowledge.push({ label: '🔗 ' + url.replace(/https?:\/\//,'').substring(0,40), content: '[Link] ' + url }); save('tlai_k', knowledge); inp.value = ''; renderKnowledge(); renderFloatKnowledge(); toast('Đã lưu link ✓'); }
+function addRawText() { const ta = document.getElementById('raw-text'), v = ta.value.trim(); if (!v) return; knowledge.push({ label: '📝 Văn bản (' + new Date().toLocaleDateString('vi-VN') + ')', content: v }); save('tlai_k', knowledge); ta.value = ''; renderKnowledge(); renderFloatKnowledge(); toast('Đã lưu kiến thức ✓'); }
+function delKnowledge(i) { knowledge.splice(i, 1); save('tlai_k', knowledge); renderKnowledge(); renderFloatKnowledge(); }
+function handleFile(e) { const file = e.target.files[0]; if (!file) return; if (file.size > 2*1024*1024) { toast('File quá lớn (tối đa 2MB)'); return; } const reader = new FileReader(); reader.onload = ev => { knowledge.push({ label: '📄 ' + file.name, content: ev.target.result.substring(0,3000) }); save('tlai_k', knowledge); renderKnowledge(); renderFloatKnowledge(); toast('Đã tải: ' + file.name + ' ✓'); }; reader.readAsText(file,'UTF-8'); e.target.value = ''; }
+function setupDrop() { const dz = document.getElementById('drop-zone'); dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag')}); dz.addEventListener('dragleave',()=>dz.classList.remove('drag')); dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');handleFile({target:{files:e.dataTransfer.files}})}); }
+
+// ── PANELS ──
+function openPanel(name) { if(name==='memory')renderMemory(); if(name==='knowledge')renderKnowledge(); document.getElementById('panel-'+name).classList.add('open'); }
+function closePanel(name) { document.getElementById('panel-'+name).classList.remove('open'); }
+
+// ── UTILS ──
+function useSug(el) { const inp=document.getElementById('msg-input'); inp.value=el.textContent.replace(/^.\s/,'').trim(); inp.dispatchEvent(new Event('input')); inp.focus(); }
+function clearChat() { if(!confirm('Xóa toàn bộ lịch sử trò chuyện?'))return; history=[]; save('tlai_h',history); document.getElementById('messages').innerHTML=`<div class="empty" id="empty-state"><div class="empty-emblem"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 9.5H22L16 14L18.5 21.5L12 17L5.5 21.5L8 14L2 9.5H9.5L12 2Z" fill="#c9a84c" opacity=".85"/></svg></div><h3>Trợ Lý AI</h3><p>Trợ lý cá nhân thông minh — phân tích tài chính, lên kế hoạch, và hỗ trợ mọi tác vụ hàng ngày.</p></div>`; syncFloatMessages(); }
+function removeEmpty() { document.getElementById('empty-state')?.remove(); }
+function scrollBottom() { const el=document.getElementById('messages'); requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;}); }
+function save(k,v) { localStorage.setItem(k,JSON.stringify(v)); }
+function saveHistory() { save('tlai_h',history.slice(-60)); }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br/>'); }
+function toast(msg) { const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2300); }
+</script>
+</body>
+</html>
